@@ -4,12 +4,12 @@ import sys
 import socket
 import threading
 import subprocess
-import shlex
 from os import chdir,path
 import errno 
 
-def main():
-    parser = argparse.ArgumentParser(
+def netcat_parser(sub_parser):
+    netcat_parser=sub_parser.add_parser(
+        'nc',
         description="My simple net tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
@@ -26,22 +26,46 @@ def main():
 
         The default ip is 0.0.0.0 and the default port is 5555
         """
-        ),
-    )
-    parser.add_argument("-s", "--shell", action="store_true", help="Starts a shell")
-    parser.add_argument("-e", "--execute", help="execute specified command")
-    parser.add_argument("-p", "--port", type=int, default=5555, help="specified port")
-    parser.add_argument("-u", "--upload", action="store_true",help="upload file")
-    parser.add_argument("-l", "--listen", action="store_true", help="listen")
-    parser.add_argument("-t", "--target", default="0.0.0.0")
+        )
+        )
+
+    netcat_parser.add_argument("-s", "--shell", action="store_true", help="Starts a shell")
+    netcat_parser.add_argument("-e", "--execute", help="execute specified command")
+    netcat_parser.add_argument("-p", "--port", type=int, default=5555, help="specified port")
+    netcat_parser.add_argument("-u", "--upload", action="store_true",help="upload file")
+    netcat_parser.add_argument("-l", "--listen", action="store_true", help="listen")
+    netcat_parser.add_argument("-t", "--target", default="0.0.0.0")
+
+def arp_parser(sub_parser):
+    arp_parser=sub_parser.add_parser(
+        'arp',
+        description="Simple ARP spoofing tool",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=textwrap.dedent(
+        """Example:
+        Will be added later
+        """
+        )
+        )
+    arp_parser.add_argument('-s','--sss',help="test")
+
+def main():
+
+    parser = argparse.ArgumentParser(description="Choose what mode you wanna use:")
+    sub_parsers=parser.add_subparsers(dest='mode',required=True)
+    netcat_parser(sub_parsers)
+    arp_parser(sub_parsers)
 
     args = parser.parse_args()
-    if args.listen or sys.stdin.isatty():
-        buffer = ""
-    else:
-        buffer = sys.stdin.raed()
-    nc = Netcat(args, buffer.encode())
-    nc.run()
+
+    if args.mode=='nc':
+        if args.listen or sys.stdin.isatty():
+            buffer = ""
+        else:
+            buffer = sys.stdin.raed()
+        nc = Netcat(args, buffer.encode())
+        nc.run()
+    
     
 
 def execute(command):
