@@ -53,7 +53,7 @@ def main():
     print("Doing the binary search test cases...")
     for i in range(len(test_cases)):
         print(f"\rTest number: {i+1}...",end="",flush=True)
-        time.sleep(0.004)# The binary seach is too fast i have to slow it down to show the progress, remove this and it will be done instantly.
+        time.sleep(0.004)# The binary seach is too fast i have to slow it down a bit to show the progress, remove this and it will be done instantly.
         binary_search(lis, test_cases[i]) # The time is calculated inside the function it self for each test case, then the avrage is calculated, the result doesn't matter.
         
     print("\nDone.")
