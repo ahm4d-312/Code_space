@@ -6,21 +6,25 @@ import threading
 import subprocess
 from os import chdir,path
 import errno 
+from colorama import init,Fore
+init(autoreset=True)
 
 def netcat_parser(sub_parser):
     netcat_parser=sub_parser.add_parser(
         'nc',
-        description="My simple net tool",
+        description=Fore.LIGHTWHITE_EX+"My simple net tool"+Fore.MAGENTA,
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
-            """Example:
-        nc.py -t 192.168.1.108 -p 5555 -l -s\t#command shell               
+            Fore.YELLOW+"""Example:
+        nc.py -t 192.168.1.108 -p 5555 -lc\t#start a command shell (listener side)              
+        nc.py -t 192.168.1.108 -p 5555 -c\t#start a command shell (sender side)
 
-        nc.py -t 192.168.1.108 -p 5555 -l -u=mytest.txt\t#upload to file
-
-        nc.py -t 192.168.1.108 -p 5555 -l -e="cat /etc/passwd"\t# execute command 
+        nc.py -t 192.168.1.108 -p 5555 -lu\t#upload a file (listener side)
+        nc.py -t 192.168.1.108 -p 5555 -u\t#upload a file (sender side)
         
-        echo 'ABC' | ./nc.py -t 192.168.1.108 -p 135\t# echo text to server port 135
+        nc.py -t 192.168.1.108 -p 5555 -luc\t#upload a file and then start a shell (listener side)
+        nc.py -t 192.168.1.108 -p 5555 -uc\t#upload a file and then start a shell (sender side)
+        
         
         nc.py -t 192.168.1.108 -p 5555\t# connect to server
 
@@ -29,10 +33,9 @@ def netcat_parser(sub_parser):
         )
         )
 
-    netcat_parser.add_argument("-s", "--shell", action="store_true", help="Starts a shell")
-    netcat_parser.add_argument("-e", "--execute", help="execute specified command")
+    netcat_parser.add_argument("-c", "--command", action="store_true", help="Starts a shell")
     netcat_parser.add_argument("-p", "--port", type=int, default=5555, help="specified port")
-    netcat_parser.add_argument("-u", "--upload", action="store_true",help="upload file")
+    netcat_parser.add_argument("-u", "--upload", action="store_true",help="upload a file")
     netcat_parser.add_argument("-l", "--listen", action="store_true", help="listen")
     netcat_parser.add_argument("-t", "--target", default="0.0.0.0")
 
@@ -47,26 +50,7 @@ def arp_parser(sub_parser):
         """
         )
         )
-    arp_parser.add_argument('-s','--sss',help="test")
-
-def main():
-
-    parser = argparse.ArgumentParser(description="Choose what mode you wanna use:")
-    sub_parsers=parser.add_subparsers(dest='mode',required=True)
-    netcat_parser(sub_parsers)
-    arp_parser(sub_parsers)
-
-    args = parser.parse_args()
-
-    if args.mode=='nc':
-        if args.listen or sys.stdin.isatty():
-            buffer = ""
-        else:
-            buffer = sys.stdin.raed()
-        nc = Netcat(args, buffer.encode())
-        nc.run()
-    
-    
+    arp_parser.add_argument('-s','--sss',help="test")    
 
 def execute(command):
     command=command.strip()
@@ -74,8 +58,10 @@ def execute(command):
         try:
             chdir(command[2::].strip())
             return ""
-        except Exception as e:
+        except FileNotFoundError as e:
                 return str(e)+'\n'
+        except:
+            raise
     output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if output.stderr.decode():
         return output.stderr.decode()
@@ -99,20 +85,22 @@ class Netcat:
         try:
             self.socket.connect((self.args.target, self.args.port))
         except OSError as e:
-            print(e)
             if e.errno == errno.EISCONN:
+                print(Fore.GREEN+str(e).split(maxsplit=2)[-1])
                 pass
             else:
-                raise 
-        #if self.buffer:
-        #    self.socket.send(self.buffer)
+                raise
+
         if self.args.upload:
             client_thread=threading.Thread(target=self.handle,args=(self.socket,))
             client_thread.run()
         try:
             while True:
-                buffer = input("> ")+"\n"
+                buffer = input(Fore.LIGHTWHITE_EX+"> ")+"\n"
                 self.socket.send(buffer.encode())
+                if buffer=='exit\n':
+                    print(Fore.RED+f"Connection Closed")
+                    self.exit()
                 recv_len = 1
                 response = ""
                 while recv_len:
@@ -122,39 +110,27 @@ class Netcat:
                     if recv_len < 4096:
                         break
                 if response:
-                    print(response)
+                    print(Fore.LIGHTBLUE_EX+response)
 
         except KeyboardInterrupt:
-            print("user terminated.")
-            self.socket.close()
-            sys.exit() 
+            print(Fore.RED+"user terminated.")
+            self.exit()
+        except BrokenPipeError:
+            print(Fore.RED+f"The server is down")
+            self.exit()
+        except:
+            raise
 
     def listen(self):
         self.socket.bind((self.args.target, self.args.port))
-        self.socket.listen(5)
-        while True:
-            clinet_socket, client_address = self.socket.accept()
-            del(client_address)
-            client_thread = threading.Thread(target=self.handle, args=(clinet_socket,))
-            client_thread.start()
-    @staticmethod
-    def recv_exact(clinet_socket,length):
-        data=b''
-        while len(data)<length:
-            chunk=clinet_socket.recv(length-len(data))
-            if not chunk:
-                print("Connection currpted!")
-                break
-            data+=chunk
-        return data
+        self.socket.listen(1)
         
+        clinet_socket = self.socket.accept()[0]
+        client_thread = threading.Thread(target=self.handle, args=(clinet_socket,))
+        client_thread.start()
 
     def handle(self, clinet_socket):
-        if self.args.execute:
-            output = execute(self.args.execute)
-            clinet_socket.send(output.encode())
-        elif self.args.upload:
-            # A way to receive file name and len as headers first then starting receiving the file 
+        if self.args.upload:
             if self.args.listen:
                 try:
                     fname_len=int.from_bytes(Netcat.recv_exact(clinet_socket,4),'big')
@@ -165,16 +141,21 @@ class Netcat:
                         while received<f_len:
                             chunk=clinet_socket.recv(min(4096,f_len-received))
                             if not chunk:
-                                raise ConnectionError("Connection corrupted: The sender closed early")
+                                raise ConnectionError(Fore.RED+"Connection corrupted: The sender closed early")
                             received+=len(chunk)
                             f.write(chunk)
                         del(received)
                 except ConnectionError as e:
-                    print("Upload failed: {e}")
-                print("Done")
+                    print(Fore.RED+f"Upload failed: {e}")
+                    if self.args.command:
+                        return
+                    self.exit()
+                print(Fore.GREEN+"Done")
+                if not self.args.command:
+                    self.exit()
 
             else:
-                fpath=input("path:").strip()
+                fpath=input(Fore.MAGENTA+"path:").strip()
                 fname=fpath.split('/')[-1]
                 fname_len=len(fname.encode())
                 fsize=path.getsize(fpath)
@@ -190,26 +171,26 @@ class Netcat:
                                 break
                             clinet_socket.sendall(chunk)
                             sent+=len(chunk)
-                            print(f"\rSent: {(sent/fsize)*100:.2f}",end='',flush=True)
+                            print(Fore.MAGENTA+f"\rSent: {(sent/fsize)*100:.2f}",end='',flush=True)
                         print()
                 except Exception as e:
-                    print(f"Error: {e}")
-                print("Done.")
+                    print(Fore.RED+f"Error: {e}")
+                print(Fore.GREEN+"Done.")
                 self.args.upload=False
-                self.send()
+                if self.args.command:
+                    self.send()
+                sys.exit()
 
-        if self.args.shell:
+        if self.args.command:
             cmd_buffer = b""
             while True:
                 try:
-                    #clinet_socket.send(b"\n")
                     while "\n" not in cmd_buffer.decode():
                         cmd_buffer += clinet_socket.recv(64)
                     response = cmd_buffer.decode()
                     if response.strip()=='exit':
-                        print(f"Connection closed.")
-                        self.socket.close()
-                        sys.exit()
+                        print(Fore.RED+f"Connection closed.")
+                        self.exit()
                     response=execute(response)
                     if not response:
                         response+='\n'
@@ -217,9 +198,22 @@ class Netcat:
                         clinet_socket.send(response.encode())
                     cmd_buffer = b""
                 except Exception as e:
-                    print(f"server killed {e}")
-                    self.socket.close()
-                    sys.exit()
+                    print(Fore.RED+f"server killed {e}")
+                    self.exit()
+    @staticmethod                    
+    def recv_exact(clinet_socket,length):
+        data=b''
+        while len(data)<length:
+            chunk=clinet_socket.recv(length-len(data))
+            if not chunk:
+                print(Fore.RED+"Connection currpted!")
+                break
+            data+=chunk
+        return data
+    
+    def exit(self):
+        self.socket.close()
+        sys.exit()
 
 class Arp_spoofing:
     def __init__(self,args):
@@ -230,6 +224,21 @@ class Arp_spoofing:
     def __str__(self):
         return self.args
 
+
+def main():
+
+    parser = argparse.ArgumentParser(description="Choose what mode you wanna use:")
+    sub_parsers=parser.add_subparsers(dest='mode',required=True)
+    
+    netcat_parser(sub_parsers)
+    arp_parser(sub_parsers)
+
+    args = parser.parse_args()
+
+    if args.mode=='nc':
+        buffer=''
+        nc = Netcat(args, buffer.encode())
+        nc.run()
 
 if __name__ == "__main__":
     main()
