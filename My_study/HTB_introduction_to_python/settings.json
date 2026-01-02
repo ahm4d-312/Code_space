@@ -1,0 +1,220 @@
+{
+  "editor.wordWrap": "on",
+  //  "workbench.colorTheme": "Material Deep Ocean",
+  "workbench.colorTheme": "Best Themes - Github Dark Default",
+  "python.defaultInterpreterPath": "/usr/bin/python3",
+  "code-runner.clearPreviousOutput": true,
+  "code-runner.showExecutionMessage": false,
+  "editor.formatOnSave": false,
+  "workbench.settings.applyToAllProfiles": [
+
+
+    
+  
+    "editor.formatOnSave",
+    "editor.formatOnPaste"
+  ],
+  "cmake.showOptionsMovedNotification": false,
+  "workbench.settings.useSplitJSON": true,
+  "editor.fontWeight": "normal",
+  "editor.formatOnPaste": false,
+  "debug.onTaskErrors": "debugAnyway",
+  "terminal.integrated.enableMultiLinePasteWarning": false,
+  "github.copilot.editor.enableAutoCompletions": true,
+  "workbench.editorAssociations": {
+    "*.evtx": "default"
+  },
+  "redhat.telemetry.enabled": true,
+  "workbench.colorCustomizations": {
+    "[Best Themes - Github Dark Default]": {
+      "activityBar.background": "#000000",
+      "editor.background": "#000000",
+      "editor.lineHighlightBackground": "#ff121200",
+      "editor.lineHighlightBorder": "#00000000",
+      "editorWhitespace.foreground": "#59A5FC",
+      "sideBar.background": "#000000",
+      "terminal.foreground": "#00748b",
+      "terminalCursor.foreground": "#1b1541ed",
+      "terminal.background": "#000000",
+      "editorGroup.border": "#1b0101",
+      "tab.border": "#424242",
+      "panel.border": "#000000",
+      "terminal.border": "#000000",
+      "sideBar.border": "#424242",
+      "titleBar.border": "#000000",
+      "tab.activeBorder": "#000000",
+      "editorGroupHeader.tabsBorder": "#424242",
+      "editorGroupHeader.tabsBackground": "#000000",
+      "tab.activeBackground": "#000000",
+      "tab.activeBorderTop": "#79009a",
+      "panelTitle.activeBorder": "#79009a",
+      "titleBar.activeBackground": "#000000",
+      "panel.background": "#000000"
+    }
+    "[Material Deep Ocean]":
+    {
+      "statusBar.background":"#26214b51"
+
+    }
+  },
+  "better-comments.tags": [
+    {
+      "tag": "!",
+      "color": "#FF2D00",
+      "strikethrough": false,
+      "underline": true,
+      "backgroundColor": "transparent",
+      "bold": false,
+      "italic": false
+    },
+    {
+      "tag": "?",
+      "color": "#3498DB",
+      "strikethrough": false,
+      "underline": false,
+      "backgroundColor": "transparent",
+      "bold": false,
+      "italic": false
+    },
+    {
+      "tag": "//",
+      "color": "#474747",
+      "strikethrough": true,
+      "underline": false,
+      "backgroundColor": "transparent",
+      "bold": false,
+      "italic": false
+    },
+    {
+      "tag": "todo",
+      "color": "#FF8C00",
+      "strikethrough": false,
+      "underline": false,
+      "backgroundColor": "transparent",
+      "bold": false,
+      "italic": false
+    },
+    {
+      "tag": "*",
+      "color": "#98C379",
+      "strikethrough": false,
+      "underline": false,
+      "backgroundColor": "transparent",
+      "bold": false,
+      "italic": false
+    }
+  ],
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": false,
+    "markdown": false,
+    "scminput": false,
+    "java": false,
+    "python": false,
+    "cpp": false
+  },
+  "window.menuBarVisibility": "compact",
+  "git.openRepositoryInParentFolders": "always",
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "bash",
+      "icon": "terminal-bash"
+    },
+    "zsh": {
+      "path": "zsh"
+    },
+    "fish": {
+      "path": "fish"
+    },
+    "tmux": {
+      "path": "tmux",
+      "icon": "terminal-tmux"
+    },
+    "pwsh": {
+      "path": "pwsh",
+      "icon": "terminal-powershell"
+    },
+    "git-shell": {
+      "path": "/usr/bin/git-shell"
+    }
+  },
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "[python]": {
+    "diffEditor.ignoreTrimWhitespace": false,
+    "editor.defaultColorDecorators": "never",
+    "gitlens.codeLens.symbolScopes": ["!Module"],
+    "editor.formatOnType": true,
+    "editor.wordBasedSuggestions": "off"
+  },
+  //"editor.defaultFormatter": "ms//-python.vscode-python-envs" 
+"editor.defaultFormatter": "ms-python.black-formatter",
+//"editor.defaultFormatter": "ms-python.autopep8",
+"gitlens.graph.minimap.additionalTypes": [],
+"gitlens.graph.minimap.dataType": "lines",
+"security.workspace.trust.untrustedFiles": "open",
+"code-runner.executorMap": {
+
+
+  
+  "javascript": "node",
+  "java": "cd $dir && javac $fileName && java $fileNameWithoutExt",
+  "c": "cd $dir && gcc $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+  "zig": "zig run",
+  "cpp": "clear && cd $dir && g++ $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+  "objective-c": "cd $dir && gcc -framework Cocoa $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+  "php": "php",
+  "python": "echo && python -u" ,
+  "perl": "perl",
+  "perl6": "perl6",
+  "ruby": "ruby",
+  "go": "go run",
+  "lua": "lua",
+  "groovy": "groovy",
+  "powershell": "powershell -ExecutionPolicy ByPass -File",
+  "bat": "cmd /c",
+  "shellscript": "bash",
+  "fsharp": "fsi",
+  "csharp": "scriptcs",
+  "vbscript": "cscript //Nologo",
+  "typescript": "ts-node",
+  "coffeescript": "coffee",
+  "scala": "scala",
+  "swift": "swift",
+  "julia": "julia",
+  "crystal": "crystal",
+  "ocaml": "ocaml",
+  "r": "Rscript",
+  "applescript": "osascript",
+  "clojure": "lein exec",
+  "haxe": "haxe --cwd $dirWithoutTrailingSlash --run $fileNameWithoutExt",
+  "rust": "cd $dir && rustc $fileName && $dir$fileNameWithoutExt",
+  "racket": "racket",
+  "scheme": "csi -script",
+  "ahk": "autohotkey",
+  "autoit": "autoit3",
+  "dart": "dart",
+  "pascal": "cd $dir && fpc $fileName && $dir$fileNameWithoutExt",
+  "d": "cd $dir && dmd $fileName && $dir$fileNameWithoutExt",
+  "haskell": "runghc",
+  "nim": "nim compile --verbosity:0 --hints:off --run",
+  "lisp": "sbcl --script",
+  "kit": "kitc --run",
+  "v": "v run",
+  "sass": "sass --style expanded",
+  "scss": "scss --style expanded",
+  "less": "cd $dir && lessc $fileName $fileNameWithoutExt.css",
+  "FortranFreeForm": "cd $dir && gfortran $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+  "fortran-modern": "cd $dir && gfortran $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+  "fortran_fixed-form": "cd $dir && gfortran $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+  "fortran": "cd $dir && gfortran $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+  "sml": "cd $dir && sml $fileName",
+  "mojo": "mojo run",
+  "erlang": "escript",
+  "spwn": "spwn build",
+  "pkl": "cd $dir && pkl eval -f yaml $fileName -o $fileNameWithoutExt.yaml",
+  "gleam": "gleam run -m $fileNameWithoutExt"
+},
+"code-runner.runInTerminal": true
+
+}
+
