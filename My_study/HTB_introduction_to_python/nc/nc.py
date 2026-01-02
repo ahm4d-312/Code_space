@@ -63,7 +63,7 @@ def arp_parser(sub_parser):
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
         Fore.YELLOW+"""Example:
-        nc.py arp -v 192.168.1.26 -i wlan0 -g 192.168.1.1
+        nc.py arp -v 192.168.1.31 -i wlan0 -g 192.168.1.1
         """
         )
         )
