@@ -1,4 +1,4 @@
-from os import chdir,path,getuid
+import os
 import argparse
 import textwrap
 import sys
@@ -8,6 +8,8 @@ import subprocess
 import errno
 import scapy.all as scapy
 import time
+import ctypes
+from platform import system
 
 
 # Setting colors for the output
@@ -77,7 +79,7 @@ def execute(command):
     command=command.strip()
     if command[0:2]=="cd": # this allows you to change the directory, normally you couldn't
         try:
-            chdir(command[2::].strip())
+            os.chdir(command[2::].strip())
             return ""
         except FileNotFoundError as e:
                 return str(e)+'\n'
@@ -89,10 +91,12 @@ def execute(command):
     return output.stdout.decode()
 
 def require_root():
-    if getuid()!=0: # when running arp spoof you must be root
+    if system()=='Linux' and os.getuid()!=0 : # when running arp spoof you must be root
         print(f"{color_124}{underline}This script must be run as root.{reset_colors}")
         sys.exit(1)
-
+    if system()=='Windows' and not ctypes.windll.shell32.IsUserAnAdmin():
+        print(f"{color_124}{underline}This script must be run as Administrator.{reset_colors}")
+        sys.exit(1)
 
 class Netcat:
     def __init__(self, args, buffer=None):
@@ -198,7 +202,7 @@ class Netcat:
                 print(reset_colors,end='') # to reset_colors after inputting the filename
                 fname=fpath.split('/')[-1]
                 fname_len=len(fname.encode())
-                fsize=path.getsize(fpath)
+                fsize=os.path.getsize(fpath)
                 clinet_socket.sendall(fname_len.to_bytes(4,'big'))
                 clinet_socket.sendall(fname.encode())
                 clinet_socket.sendall(fsize.to_bytes(8,'big'))
