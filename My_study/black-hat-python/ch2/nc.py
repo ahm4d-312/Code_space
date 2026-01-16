@@ -1,63 +1,99 @@
+from os import chdir,path,getuid
 import argparse
 import textwrap
 import sys
 import socket
 import threading
 import subprocess
-import shlex
-from os import chdir,path
+import errno
+import time
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="My simple net tool",
+
+# Setting colors for the output
+# to make it easier to read
+underline='\033[4m'
+remove_underline='\033[24m'
+color_block='\033[38;5;'
+color_34=f'{color_block}34m'
+color_75=f'{color_block}75m'
+color_160=f'{color_block}160m'
+color_123=f'{color_block}123m'
+color_124=f'{color_block}124m'
+color_139=f'{color_block}139m'
+color_145=f'{color_block}145m'
+color_146=f'{color_block}146m'
+color_196=f'{color_block}196m'
+color_251=f'{color_block}251m'
+reset_colors='\033[0m'
+
+
+def netcat_parser(sub_parser):
+    netcat_parser=sub_parser.add_parser(
+        'nc',
+        description=f"{color_251}My simple net tool{color_146}",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
-            """Example:
-        nc.py -t 192.168.1.108 -p 5555 -l -s\t#command shell               
+            f"""{color_145}Example:
+        nc.py nc -t 192.168.1.108 -p 5555 -lc\t#start a command shell (listener side)              
+        nc.py nc -t 192.168.1.108 -p 5555 -c\t#start a command shell (sender side)
 
-        nc.py -t 192.168.1.108 -p 5555 -l -u=mytest.txt\t#upload to file
-
-        nc.py -t 192.168.1.108 -p 5555 -l -e="cat /etc/passwd"\t# execute command 
+        nc.py nc -t 192.168.1.108 -p 5555 -lu\t#upload a file (listener side)
+        nc.py nc -t 192.168.1.108 -p 5555 -u\t#upload a file (sender side)
         
-        echo 'ABC' | ./nc.py -t 192.168.1.108 -p 135\t# echo text to server port 135
-        
-        nc.py -t 192.168.1.108 -p 5555\t# connect to server
+        nc.py nc -t 192.168.1.108 -p 5555 -luc\t#upload a file and then start a shell (listener side)
+        nc.py nc -t 192.168.1.108 -p 5555 -uc\t#upload a file and then start a shell (sender side)
 
-        The default ip is 0.0.0.0 and the default port is 5555
+
+        nc.py nc -t 192.168.1.108 -p 5555\t# connect to server
+
+        The default ip is 0.0.0.0 and the default port is 5555{reset_colors}
         """
-        ),
-    )
-    parser.add_argument("-s", "--shell", action="store_true", help="Starts a shell")
-    parser.add_argument("-e", "--execute", help="execute specified command")
-    parser.add_argument("-p", "--port", type=int, default=5555, help="specified port")
-    parser.add_argument("-u", "--upload", action="store_true",help="upload file")
-    parser.add_argument("-l", "--listen", action="store_true", help="listen")
-    parser.add_argument("-t", "--target", default="0.0.0.0")
+        )
+        )
 
-    args = parser.parse_args()
-    if args.listen:
-        buffer = ""
-    else:
-        buffer = sys.stdin.read()
-    nc = Netcat(args, buffer.encode())
-    nc.run()
-    
+    netcat_parser.add_argument("-c", "--command", action="store_true", help="Starts a shell")
+    netcat_parser.add_argument("-p", "--port", type=int, default=5555, help="specified port")
+    netcat_parser.add_argument("-u", "--upload", action="store_true",help="upload a file")
+    netcat_parser.add_argument("-l", "--listen", action="store_true", help="listen")
+    netcat_parser.add_argument("-t", "--target", default="0.0.0.0")
 
+def arp_parser(sub_parser):
+    arp_parser=sub_parser.add_parser(
+        'arp',
+        description=f"{color_251}Simple ARP spoofing tool{color_146}",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=textwrap.dedent(
+        f"""{color_145}Example:
+        nc.py arp -v 192.168.1.31 -i wlan0 -g 192.168.1.1{reset_colors}
+        """
+        )
+        )
+    arp_parser.add_argument('-v','--victim',help='Set the victim\'s ip address',required=True)
+    arp_parser.add_argument('-g','--gateway',default='192.168.1.1',help='Set the gateway\'s ip address')
+    arp_parser.add_argument('-i','--interface',help='Set the interface name',required=True)    
 
-def execute_old(cmd):
-    cmd = cmd.strip()
-    if not cmd:
-        return
-    output = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
-    return output.decode()
-def execute(command):
-    command=command.strip()
-    if command[0:2]=="cd":
+def execute_helper(command):
+    if command.split(maxsplit=1)[0]=='cd':
         try:
             chdir(command[2::].strip())
-            return "\n"
-        except Exception as e:
+            return ""
+        except FileNotFoundError as e:
                 return str(e)+'\n'
+        except:
+            raise
+    if command.split(maxsplit=1)[0].lower()=='powershell' or command.split(maxsplit=1)[0].lower()=='cmd':
+        output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        if output.stderr.decode():
+            return output.stderr.decode()
+        return ""
+
+
+def execute(command):
+    command=command.strip()
+    special_commands={'cd','powershell','cmd'}
+    if command.split(maxsplit=1)[0] in special_commands:
+        return execute_helper(command) # this allows you to change the directory, normally you couldn't
+
     output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if output.stderr.decode():
         return output.stderr.decode()
@@ -78,11 +114,29 @@ class Netcat:
         self.send()
 
     def send(self):
-        self.socket.connect((self.args.target, self.args.port))
-        if self.buffer:
-            self.socket.send(self.buffer)
+        # To check if you are already connected
+        try:
+            self.socket.connect((self.args.target, self.args.port))
+        except OSError as e:
+            if e.errno == errno.EISCONN:
+                print(f'{color_34}{str(e).split(maxsplit=2)[-1]}{reset_colors}')
+                pass
+            else:
+                raise
+        
+        #Upload a file
+        if self.args.upload:
+            client_thread=threading.Thread(target=self.handle,args=(self.socket,))
+            client_thread.run()
+        
+        # The shell
         try:
             while True:
+                buffer = input(f"{color_251}> ")+"\n"
+                self.socket.send(buffer.encode())
+                if buffer=='exit\n':
+                    print(f"{color_124}Connection Closed{reset_colors}")
+                    self.exit()
                 recv_len = 1
                 response = ""
                 while recv_len:
@@ -92,104 +146,140 @@ class Netcat:
                     if recv_len < 4096:
                         break
                 if response:
-                    print(response)
-                    buffer = input("> ")+"\n"
-                    self.socket.send(buffer.encode())
+                    print(f'{color_75}{response}{reset_colors}')
+
         except KeyboardInterrupt:
-            print("user terminated.")
-            self.socket.close()
-            sys.exit()
+            print(f"{color_124}user terminated.{reset_colors}")
+            self.exit()
+        except BrokenPipeError:
+            print(f"{color_124}The server is down{reset_colors}")
+            self.exit()
+        except:
+            raise
 
     def listen(self):
         self.socket.bind((self.args.target, self.args.port))
-        self.socket.listen(5)
-        while True:
-            clinet_socket, client_address = self.socket.accept()
-            del(client_address)
-            client_thread = threading.Thread(target=self.handle, args=(clinet_socket,))
-            client_thread.start()
-    @staticmethod
-    def recv_exact(clinet_socket,length):
-        data=b''
-        while len(data)<length:
-            chunk=clinet_socket.recv(length-len(data))
-            if not chunk:
-                print("Connection currpted!")
-                break
-            data+=chunk
-        return data
+        self.socket.listen(1)
         
+        # Starts the client thread
+        clinet_socket = self.socket.accept()[0]
+        client_thread = threading.Thread(target=self.handle, args=(clinet_socket,))
+        client_thread.start() 
 
     def handle(self, clinet_socket):
-        if self.args.execute:
-            output = execute(self.args.execute)
-            clinet_socket.send(output.encode())
-        elif self.args.upload:
-            # A way to receive file name and len as headers first then starting receiving the file 
+        if self.args.upload:
+
+            # Uplaoding a file (receiver side)
             if self.args.listen:
                 try:
+                    # Receiving a header containing meta data needed to download the file
                     fname_len=int.from_bytes(Netcat.recv_exact(clinet_socket,4),'big')
                     fname=Netcat.recv_exact(clinet_socket,fname_len).decode()
                     f_len=int.from_bytes(Netcat.recv_exact(clinet_socket,8),'big')
                     with open(fname,'wb') as f:
                         received=0
                         while received<f_len:
+                            # Receiving and writing the file in chunks, one chunk at a time so large files don't consume memory
                             chunk=clinet_socket.recv(min(4096,f_len-received))
                             if not chunk:
-                                raise ConnectionError("Connection corrupted: The sender closed early")
+                                raise ConnectionError(f"{color_124}Connection corrupted: The sender closed early{reset_colors}")
                             received+=len(chunk)
                             f.write(chunk)
                         del(received)
                 except ConnectionError as e:
-                    print("Upload failed: {e}")
+                    # print(f"{color_124}Upload failed: {e}{reset_colors}")
+                    # if the upload failed and you setted --command option to true, then start a shell, other wise just close an
+                    if self.args.command:
+                        return
+                    self.exit()
 
+                # After finishing uploading the file, if you setted --command option to true start a shell, other wise close the program 
+                if not self.args.command:
+                    self.exit()
+            
+            # Uplaoding a file (sender side)
             else:
-                fpath=input("path:")
-                fname=fpath.strip().split('/')[-1]
+                # Creating headers containing meta data needed to upload the file
+                fpath=input(f'{color_139}Path: ').strip()
+                print(reset_colors,end='') # to reset_colors after inputting the filename
+                fname=fpath.split('/')[-1]
                 fname_len=len(fname.encode())
                 fsize=path.getsize(fpath)
                 clinet_socket.sendall(fname_len.to_bytes(4,'big'))
                 clinet_socket.sendall(fname.encode())
                 clinet_socket.sendall(fsize.to_bytes(8,'big'))
                 try:
+                    # Reading and sending the file in chunks, one chunk at a time so large files don't consume memory
                     with open(fpath,'rb') as f:
+                        sent=0
                         while True:
                             chunk=f.read(4096)
                             if not chunk:
                                 break
                             clinet_socket.sendall(chunk)
+                            sent+=len(chunk)
+                            print(f"\r{color_139}Sent: {(sent/fsize)*100:.2f}",end='',flush=True)
+                        print(reset_colors)# Go down a new line and reset colors
                 except Exception as e:
-                    print(f"Error: {e}")
+                    print(f"{color_124}Error: {e}{reset_colors}")
+                print(f"{color_34}Done.{reset_colors}")
+                self.args.upload=False 
 
-        elif self.args.shell:
+                # If the --commnad option is true, start a shell after uploading the file
+                if self.args.command:
+                    self.send()
+                sys.exit()
+
+        # Here the sent commands are received and executed
+        if self.args.command:
             cmd_buffer = b""
             while True:
                 try:
-                    clinet_socket.send(b"#> ")
                     while "\n" not in cmd_buffer.decode():
                         cmd_buffer += clinet_socket.recv(64)
                     response = cmd_buffer.decode()
                     if response.strip()=='exit':
-                        print(f"server killed.")
-                        self.socket.close()
-                        sys.exit()
+                        print(f"{color_124}Connection closed.{reset_colors}")
+                        self.exit()
                     response=execute(response)
+                    if not response:
+                        response+='\n'
                     if response:
                         clinet_socket.send(response.encode())
                     cmd_buffer = b""
                 except Exception as e:
-                    print(f"server killed {e}")
-                    self.socket.close()
-                    sys.exit()
+                    print(f"{color_124}server killed {e}{reset_colors}")
+                    self.exit()
 
-class Arp_spoofing:
-    def __init__(self,args):
-        self.args=args
+    # A static method to receive the meta data correctly, since the whole upload process depends on them
+    @staticmethod                    
+    def recv_exact(clinet_socket,length):
+        data=b''
+        while len(data)<length:
+            chunk=clinet_socket.recv(length-len(data))
+            if not chunk:
+                print(f"{color_124}Connection currpted!{reset_colors}")
+                break
+            data+=chunk
+        return data
     
-    def tt(self):
-        print(self)
-    def __str__(self):
-        return self.args
+    def exit(self):
+        self.socket.close()
+        sys.exit()
+
+        
+def main():
+    parser = argparse.ArgumentParser(description="Choose what mode you want to use:")
+    sub_parsers=parser.add_subparsers(dest='mode',required=True)
+    
+    netcat_parser(sub_parsers)
+
+    args = parser.parse_args()
+    
+    if args.mode=='nc':
+        buffer=''
+        nc = Netcat(args, buffer.encode())
+        nc.run()
 
 
 if __name__ == "__main__":
