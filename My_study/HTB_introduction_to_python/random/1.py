@@ -1,2 +1,1 @@
-import os
-os.chdir("none existing dir")
+print(2**16)

@@ -6,7 +6,6 @@ import socket
 import threading
 import subprocess
 import errno
-import scapy.all as scapy
 import time
 import ctypes
 from platform import system
@@ -362,8 +361,9 @@ def main():
         nc = Netcat(args, buffer.encode())
         nc.run()
     elif args.mode=='arp':
-        require_root() # you must be root to start the arp spoof attack 
+        global scapy
         import scapy.all as scapy
+        require_root() # you must be root to start the arp spoof attack 
         spoofer=ArpSpoofer(args)
         spoofer.run()
 

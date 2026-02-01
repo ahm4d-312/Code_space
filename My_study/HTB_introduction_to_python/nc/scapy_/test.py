@@ -2,7 +2,7 @@ import scapy.all as scapy
 import time
 request=scapy.ARP()
 
-request.pdst='172.20.10.1'
+request.pdst='172.30.241.186 '
 broadcast=scapy.Ether()
 
 broadcast.dst="ff:ff:ff:ff:ff:ff"

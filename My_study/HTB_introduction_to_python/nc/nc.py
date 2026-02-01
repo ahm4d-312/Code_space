@@ -67,9 +67,9 @@ def arp_parser(sub_parser):
         """
         )
         )
-    arp_parser.add_argument('-v','--victim',help='victim ip address',required=True)
-    arp_parser.add_argument('-g','--gateway',default='192.168.1.1',help='set gateway\'s ip address')
-    arp_parser.add_argument('-i','--interface',help='set interface name',required=True)    
+    arp_parser.add_argument('-v','--victim',help='Set the victim\'s ip address',required=True)
+    arp_parser.add_argument('-g','--gateway',default='192.168.1.1',help='Set the gateway\'s ip address')
+    arp_parser.add_argument('-i','--interface',help='Set the interface name',required=True)    
 
 def execute(command):
     command=command.strip()
@@ -341,7 +341,7 @@ class ArpSpoofer:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Choose what mode you wanna use:")
+    parser = argparse.ArgumentParser(description="Choose what mode you want to use:")
     sub_parsers=parser.add_subparsers(dest='mode',required=True)
     
     netcat_parser(sub_parsers)

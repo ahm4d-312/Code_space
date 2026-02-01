@@ -1,6 +1,7 @@
-import os
-print(os.getcwd())
-print(os.getcwdb())
-f=False
-f=not f
-print(f)
+a=input().strip().split()
+p="dddd%sddd%sddd"%(a[0],a[1])
+print(p)
+dp=set()
+dp.add(2)
+dp.add(2)
+print(dp)
