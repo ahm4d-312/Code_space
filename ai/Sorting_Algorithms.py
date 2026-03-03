@@ -20,7 +20,7 @@ class Sorting_Algorithms:
         i=first
         j=last+1
 
-        while True:
+        while True:#2 1 3 i=2 j=2
             while True:
                 i+=1
                 if i >=last or lis[i] >=pivot:
@@ -115,21 +115,6 @@ class Sorting_Algorithms:
             lis[i], lis[min_index] = lis[min_index], lis[i]
         return lis
 
-    def insertion_sort(self,lis=None):
-        if lis is None:# you can add and sort any list, if no list is passed the UNORDERED_LIST attribute will be sorted
-            lis=self.UNORDERED_LIST.copy() # copy the original unordered list
-        
-        if Sorting_Algorithms.is_sorted(lis): # on the first run check if the lis is already sorted
-            return lis
-        
-        for i in range(1,len(lis)):
-            key=lis[i]
-            j=i-1
-            while j>-1 and key<lis[j]:
-                lis[j+1]=lis[j]
-                j-=1
-            lis[j+1]=key
-        return lis
 
 
 def main():
