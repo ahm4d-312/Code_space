@@ -1,0 +1,12 @@
+<frozen importlib._bootstrap>:491: RuntimeWarning: Your system is avx2 capable but pygame was not built with support for it. The performance of some of your blits could be adversely affected. Consider enabling compile time detection with environment variables like PYGAME_DETECT_AVX2=1 if you are compiling without cross compilation.
+/home/ahm4d_312/Codes_Vault/Algorithms_visualaizer/temp.py:3: RuntimeWarning: use font: No module named 'pygame.font'
+(ModuleNotFoundError: No module named 'pygame.font')
+  print(dir(pygame.font.SysFont('comicsans', 40)))
+Traceback (most recent call last):
+  File "/home/ahm4d_312/Codes_Vault/Algorithms_visualaizer/temp.py", line 3, in <module>
+    print(dir(pygame.font.SysFont('comicsans', 40)))
+              ^^^^^^^^^^^^^^^^^^^
+  File "/home/ahm4d_312/Codes_Vault/Algorithms_visualaizer/.visualizer_env/lib/python3.14/site-packages/pygame/__init__.py", line 70, in __getattr__
+    raise NotImplementedError(missing_msg)
+NotImplementedError: font module not available (ModuleNotFoundError: No module named 'pygame.font')
+

@@ -1,0 +1,7 @@
+prefix=/home/ahm4d_312/miniconda3
+includedir=${prefix}/include
+ 
+Name: RandrProto
+Description: Randr extension headers
+Version: 1.6.0
+Cflags: -I${includedir}
