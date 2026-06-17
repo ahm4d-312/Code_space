@@ -1,0 +1,1 @@
+/home/ahm4d_312/Codes_Vault/Rust/learn_rust/ch3/chapter_projects/Fahrenheit-Celsius_converter/target/debug/Fahrenheit-Celsius_converter: /home/ahm4d_312/Codes_Vault/Rust/learn_rust/ch3/chapter_projects/Fahrenheit-Celsius_converter/src/main.rs
