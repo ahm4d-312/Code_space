@@ -7,9 +7,11 @@ fn fib_loop(num: i64) -> i64 {
         return num;
     }
     for _ in 2..num {
+        // xor swapping
         fib_pair[0] = fib_pair[0] ^ fib_pair[1];
         fib_pair[1] = fib_pair[0] ^ fib_pair[1];
         fib_pair[0] = fib_pair[0] ^ fib_pair[1];
+
         fib_pair[1] = fib_pair[0] + fib_pair[1];
     }
     return fib_pair[0] + fib_pair[1];
@@ -22,9 +24,10 @@ fn main() {
         println!("1) Recursion mode");
         println!("2) For loop mode");
         println!("3) exit");
-        let mut option: String = String::new();
         print!("~> ");
         io::stdout().flush().unwrap();
+
+        let mut option: String = String::new();
         io::stdin()
             .read_line(&mut option)
             .expect("Failed to write the number");

@@ -21,6 +21,7 @@ fn main() {
 
         print!("Enter the tampratrue: ");
         stdout().flush().unwrap();
+
         let mut temprature: String = String::new();
         stdin()
             .read_line(&mut temprature)
@@ -33,6 +34,7 @@ fn main() {
                 return;
             }
         };
+
         let answer: &str;
         let result: f32 = {
             if option.trim() == "1" {
